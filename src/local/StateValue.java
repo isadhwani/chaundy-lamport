@@ -16,6 +16,7 @@ public class StateValue {
     public int currentMarkerID = 0;
 
     public ArrayList<String> recordedQueue = new ArrayList<String>();
+    public boolean incrementMarkerAfterSend = false;
 
     public StateValue(int s) {
         this.state = s;

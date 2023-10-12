@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
 public class OpenListener extends Thread {
     public boolean hasToken = false;
 
@@ -39,10 +38,15 @@ public class OpenListener extends Thread {
 
     int currentMarkerIndex = 0;
 
-    OpenListener(int port, String myHostname, StateValue s) {
+    ArrayList<String> recordedQueue = new ArrayList<String>();
+
+    String channelName;
+
+    OpenListener(int port, String myHostname, StateValue s, String channelName) {
         this.port = port;
         this.myHostname = myHostname;
         this.state = s;
+        this.channelName = channelName;
     }
 
     ServerSocket connection;
@@ -74,68 +78,86 @@ public class OpenListener extends Thread {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-            String message;
-            while ((message = reader.readLine()) != null) {
-                //System.out.println("Received from " + clientSocket.getInetAddress().getHostAddress() + ": " + message);
-                //System.out.println(message);
-                String msg = extractMessage(message, "message:");
+            String receivedMessages;
+            while ((receivedMessages = reader.readLine()) != null) {
+                //System.out.println("Received from " + clientSocket.getInetAddress().getHostName() + ": " + receivedMessages);
+                //System.out.println("Received: " + message);
 
-                Map decoded = decodeJSON(message);
+                String[] messages = receivedMessages.split("\\}\\{");
 
-                //System.out.println(message);
-                //System.out.println("extracted msg: " + msg);
-
-
-                if (msg.equals("token")) {
-                    this.hasToken = true;
-                    state.hasToken = true;
-
-                    if (this.isRecording) {
-                        state.recordedQueue.add(message);
-
-                    }
+                // if multiple messages are received at once, iterate through them
+                for (String message : messages) {
+                    // Add back the missing curly braces for each message
+                    String jsonMessage = "{" + message + "}";
 
 
-                    System.out.println("{id: " + myHostname + ", sender: " + decoded.get("sender")
-                            + ", receiver: " + decoded.get("receiver") + ", message: " + decoded.get("message") + "}");
+                    String msg = extractMessage(jsonMessage, "message:");
+                    Map decoded = decodeJSON(jsonMessage);
 
-                } else if (msg.contains("marker")) {
-                    int markerIndex = extractMarkerNumber(msg);
+                    //System.out.println(message);
+                    //System.out.println("extracted msg: " + msg);
 
-                    // If this listener has not yet received a marker (check ID later)
-                    if (!this.state.receivedMarker) {
-                        System.out.println("Received first marker, current state: " + state.getState());
-                        this.sendOnOther = true;
-                        this.recordOther = true;
-                        this.isRecording = false;
-                        this.state.receivedMarker = true;
-                        this.isClosed = true;
 
-                    } else if(!this.isClosed) {
-                        // if this process has already received a marker AND this channel is open, we know this
-                        // is the only other channel a process can listen on and the snapshot must be over
-                        //this.isRecording = false;
+                    if (msg.equals("token")) {
+                        this.hasToken = true;
+                        state.hasToken = true;
 
-                        this.isRecording = false;
-                        this.isClosed = true;
-                        this.sendOnOther = true;
-
-                        System.out.println("Message Queue with " + state.recordedQueue.size() + " messages: " + state.recordedQueue);
-
-                        for (String s : state.recordedQueue) {
-                            System.out.println(s);
+                        if (this.isRecording) {
+                            //System.out.println("RECORDING!");
+                            this.recordedQueue.add(jsonMessage);
                         }
 
-                        this.state.recordedQueue = new ArrayList<String>();
-                        System.out.println("SNAPSHOT COMPLETE");
-                        System.out.println("{id: " + this.myHostname + ", snapshot:‘‘channel closed’’, channel: S_ID-R_ID, queue:[CHANNEL_VALUES]}");
 
+                        System.out.println("{id: " + myHostname + ", sender: " + decoded.get("sender")
+                                + ", receiver: " + decoded.get("receiver") + ", message: ''" + msg + "''}");
+
+                    } else if (msg.contains("marker")) {
+                        int markerIndex = extractMarkerNumber(msg);
+
+                        if (markerIndex >= state.currentMarkerID && !this.isClosed) {
+
+                            // If this listener has not yet received a marker (check ID later)
+                            if (!this.state.receivedMarker) {
+                                System.out.println("Received first marker from " + decoded.get("sender") + ", current state: " + state.getState());
+                                this.sendOnOther = true;
+                                this.recordOther = true;
+                                this.isRecording = false;
+                                this.state.receivedMarker = true;
+                                this.isClosed = true;
+
+                                System.out.println("{id: " + this.myHostname +
+                                        ", snapshot:‘‘channel closed’’, channel: " + channelName +
+                                        ", queue:" + recordedQueue + "}");
+
+                            } else {
+                                // if this process has already received a marker AND this channel is open, we know this
+                                // is the only other channel a process can listen on and the snapshot must be over
+                                //this.isRecording = false;
+
+                                this.isRecording = false;
+                                this.isClosed = true;
+                                this.sendOnOther = true;
+
+                                //System.out.println("Message Queue with " + recordedQueue.size() + " messages: " + recordedQueue);
+
+
+                                //System.out.println("SNAPSHOT COMPLETE");
+                                System.out.println("{id: " + this.myHostname +
+                                        ", snapshot:‘‘channel closed’’, channel: " + channelName +
+                                        ", queue:" + recordedQueue + "}");
+
+
+                                this.recordedQueue = new ArrayList<String>();
+
+
+                            }
+                        }
                     }
                 }
             }
             // Client disconnected
             //System.out.println("Client disconnected: " + clientSocket.getInetAddress());
-            clientSocket.close();
+            //clientSocket.close();
         } catch (IOException e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
@@ -143,13 +165,8 @@ public class OpenListener extends Thread {
     }
 
     public boolean hasToken() {
-        if (this.hasToken) {
-            //System.out.println("I have the token!");
-        } else {
-            //System.out.println("I don't have the token!");
-        }
         try {
-            sleep(1000);
+            sleep(1);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

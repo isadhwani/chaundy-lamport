@@ -19,7 +19,7 @@ public class Main {
      *
      * @param args
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         System.out.println("Command line arguments: " + Arrays.toString(args));
 
         Map<Integer, CommunicationChannels> outgoingPortTable = makePortTable();
@@ -71,10 +71,12 @@ public class Main {
         StateValue state = new StateValue(0);
 
 
-        OpenListener previousListen = new OpenListener(listenPorts[1], hostname, state);
+        String prevListenName = neighbors[1] + "-" +  hostname;
+        OpenListener previousListen = new OpenListener(listenPorts[1], hostname, state, prevListenName);
         previousListen.start();
 
-        OpenListener nextListen = new OpenListener(listenPorts[0], hostname, state);
+        String nextListenName = neighbors[0] + "-" +  hostname;
+        OpenListener nextListen = new OpenListener(listenPorts[0], hostname, state, nextListenName);
         nextListen.start();
 
         try {
@@ -83,8 +85,8 @@ public class Main {
             throw new RuntimeException(e);
         }
 
-        float t = 1;
-        float m = -1;
+        float t = 0;
+        float m = 0;
         float s = -1;
 
         for (int i = 0; i < args.length; i++) {
@@ -122,19 +124,6 @@ public class Main {
         boolean first = true;
 
         while (true) {
-            if (previousListen.hasToken()) {
-
-                if (!first) {
-                    state.state++;
-                } else {
-                    first = false;
-                }
-
-                System.out.println("{id: " + hostname + ", state: " + state.state + "}");
-
-                nextTalk.hasToken = true;
-                previousListen.hasToken = false;
-            }
 
             // If this peer should start a snapshot...
             if (state.getState() == s && !startedSnap) {
@@ -154,19 +143,44 @@ public class Main {
             // Snapshot cases
             if (nextListen.sendOnOther) {
                 previousTalk.sendMarker = true;
+                nextListen.sendOnOther = false;
             }
             if (previousListen.sendOnOther) {
                 nextTalk.sendMarker = true;
+                previousListen.sendOnOther = false;
             }
             if (nextListen.recordOther) {
                 previousListen.isRecording = true;
+                nextListen.recordOther = false;
             }
             if (previousListen.recordOther) {
                 nextListen.isRecording = true;
+                previousListen.recordOther = false;
             }
 
             if(previousListen.isClosed && nextListen.isClosed) {
                 System.out.println("{id:" + hostname + ", snapshot:''complete''}");
+                previousListen.isClosed = nextListen.isClosed = false;
+
+                sleep(1000);
+                // after finishing snap, only accept markers of a higher ID
+                nextTalk.sendMarker = false;
+                previousTalk.sendMarker = false;
+                state.incrementMarkerAfterSend = true;
+            }
+
+            if (previousListen.hasToken()) {
+
+                if (!first) {
+                    state.state++;
+                } else {
+                    first = false;
+                }
+
+                System.out.println("{id: " + hostname + ", state: " + state.state + "}");
+
+                nextTalk.hasToken = true;
+                previousListen.hasToken = false;
             }
 
         }

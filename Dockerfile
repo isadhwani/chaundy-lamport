@@ -17,9 +17,6 @@ ADD src/local/OpenListener.java /app/local/
 ADD src/local/OpenTalker.java /app/local/
 ADD src/local/StateValue.java /app/local/
 
-ADD jackson-core-2.15.2.jar /app/
-ADD jackson-annotations-2.15.2.jar /app/
-ADD jackson-databind-2.15.2.jar /app/
 
 ADD hostsfile.txt /app/
 

@@ -93,6 +93,10 @@ public class OpenTalker extends Thread {
                     outputStream.flush();
                     this.sendMarker = false;
                 }
+                if(state.incrementMarkerAfterSend) {
+                    state.currentMarkerID++;
+                    state.incrementMarkerAfterSend = false;
+                }
 
                 // Close the socket
                 socket.close();
