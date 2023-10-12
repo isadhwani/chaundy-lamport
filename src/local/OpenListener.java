@@ -13,15 +13,12 @@ import java.util.regex.Pattern;
 
 
 public class OpenListener extends Thread {
-   public  boolean hasToken = false;
+    public boolean hasToken = false;
 
 
-   public ArrayList<String> recordedQueue = new ArrayList<String>();
-    public ArrayList<Integer> stateQueue = new ArrayList<Integer>();
 
     // Is this channel recording messages and states?
     public boolean isRecording = false;
-
 
 
     public StateValue state;
@@ -30,8 +27,14 @@ public class OpenListener extends Thread {
 
     // If a token is received on this listener, then the process should send a marker to the opposite talker
     // if prevListener receives a marker, then send msg on nextTalker
-    public boolean sendToOther = false;
+    public boolean sendOnOther = false;
 
+    // tells other listener when to record messages
+    public boolean recordOther = false;
+
+    public boolean finishedSnap = false;
+
+    public boolean isClosed = false;
     int port;
 
     int currentMarkerIndex = 0;
@@ -67,7 +70,6 @@ public class OpenListener extends Thread {
     }
 
 
-
     private void handleClient(Socket clientSocket) {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -84,92 +86,64 @@ public class OpenListener extends Thread {
                 //System.out.println("extracted msg: " + msg);
 
 
-
-
-                if(msg.equals("token")) {
+                if (msg.equals("token")) {
                     this.hasToken = true;
                     state.hasToken = true;
 
-                    if(this.isRecording) {
-                        recordedQueue.add(message);
+                    if (this.isRecording) {
+                        state.recordedQueue.add(message);
+
                     }
+
 
                     System.out.println("{id: " + myHostname + ", sender: " + decoded.get("sender")
                             + ", receiver: " + decoded.get("receiver") + ", message: " + decoded.get("message") + "}");
 
-
-                } else if (msg.contains("marker")  ) {
+                } else if (msg.contains("marker")) {
                     int markerIndex = extractMarkerNumber(msg);
 
-                    // If the markerID has not already been recorded, then process this marker
-                    if(markerIndex >= this.state.currentMarkerID) {
+                    // If this listener has not yet received a marker (check ID later)
+                    if (!this.state.receivedMarker) {
+                        System.out.println("Received first marker, current state: " + state.getState());
+                        this.sendOnOther = true;
+                        this.recordOther = true;
+                        this.isRecording = false;
+                        this.state.receivedMarker = true;
+                        this.isClosed = true;
 
-                        // if this peer has already not received a marker...
-                        if (!state.receivedMarker && this.currentMarkerIndex <= markerIndex) {
-                        /*
-                        1. record the state S_pi
-                        2. mark as “closed” the channel that the marker was received on (C_ik)
-                        3. send out markers on all its outgoing channels (except Cik)
-                        4. start recording messages received on all incoming channels (except C_ik)
-                         */
+                    } else if(!this.isClosed) {
+                        // if this process has already received a marker AND this channel is open, we know this
+                        // is the only other channel a process can listen on and the snapshot must be over
+                        //this.isRecording = false;
 
+                        this.isRecording = false;
+                        this.isClosed = true;
+                        this.sendOnOther = true;
 
-                            System.out.println("Received first marker, current State: " + state.getState());
-                            this.currentMarkerIndex++;
+                        System.out.println("Message Queue with " + state.recordedQueue.size() + " messages: " + state.recordedQueue);
 
-                            // set boolean flag of receiving marker to true, so we can tell in the other listener
-                            state.receivedMarker = true;
-
-                            // Tell other talker to send a marker
-                            this.sendToOther = true;
-
-                        } else if (state.receivedMarker && this.currentMarkerIndex <= markerIndex) {
-                            // if this process has already received a marker AND this channel is open, we know this
-                            // is the only other channel a process can listen on and the snapshot must be over
-                            this.isRecording = false;
-
-
-                            this.currentMarkerIndex++;
-
-
-                            System.out.println("received second marker,snapshot over");
-
-                            this.sendToOther = true;
-
-                            // Let main have 1 second to send a message, before stopping the snapshot
-                            sleep(1000);
-                            state.receivedMarker = false;
-
-
-
-                            System.out.print("Message Queue:");
-                            for (String s : recordedQueue) {
-                                System.out.print(s + " ");
-                            }
-
-                            System.out.println("SNAPSHOT COMPLETE");
-
-                        } else {
-                            System.out.println("received duplicate marker, ignore");
+                        for (String s : state.recordedQueue) {
+                            System.out.println(s);
                         }
+
+                        this.state.recordedQueue = new ArrayList<String>();
+                        System.out.println("SNAPSHOT COMPLETE");
+                        System.out.println("{id: " + this.myHostname + ", snapshot:‘‘channel closed’’, channel: S_ID-R_ID, queue:[CHANNEL_VALUES]}");
 
                     }
                 }
             }
-
-
             // Client disconnected
             //System.out.println("Client disconnected: " + clientSocket.getInetAddress());
             clientSocket.close();
         } catch (IOException e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         }
     }
-    public boolean hasToken()  {
-        if(this.hasToken) {
+
+    public boolean hasToken() {
+        if (this.hasToken) {
             //System.out.println("I have the token!");
         } else {
             //System.out.println("I don't have the token!");
@@ -226,6 +200,7 @@ public class OpenListener extends Thread {
             throw new IllegalArgumentException("Invalid host name format: " + marker);
         }
     }
+
     public static Map<String, Object> decodeJSON(String jsonString) {
         Map<String, Object> resultMap = new HashMap<>();
 

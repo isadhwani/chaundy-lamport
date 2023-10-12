@@ -16,11 +16,17 @@ public class OpenTalker extends Thread {
 
     public StateValue state;
 
-    public OpenTalker(String hostname, int port, String myHostname, StateValue s) {
+    double markerDelay = 0;
+    double tokenDelay = 0;
+
+
+    public OpenTalker(String hostname, int port, String myHostname, StateValue s, double tokenDelay ,double markerDelay) {
         this.hostname = hostname;
         this.port = port;
         this.myHostname = myHostname;
         this.state = s;
+        this.markerDelay = markerDelay;
+        this.tokenDelay = tokenDelay;
     }
 
 
@@ -55,6 +61,8 @@ public class OpenTalker extends Thread {
                 OutputStream outputStream = socket.getOutputStream();
 
                 if (this.hasToken) {
+                    sleep((long) (this.tokenDelay * 1000));
+
                     String message = "{id: " + myHostname + ", sender: " + myHostname +
                     ", receiver: " + hostname + ", message:''token''}";
                     System.out.println(message);
@@ -70,6 +78,7 @@ public class OpenTalker extends Thread {
                 }
 
                 if (this.sendMarker) {
+                    sleep((long) (this.markerDelay * 1000));
                     String hasTokenYesNo = state.hasToken ? "YES" : "NO";
 
 
@@ -90,6 +99,8 @@ public class OpenTalker extends Thread {
             } catch (UnknownHostException e) {
                 throw new RuntimeException(e);
             } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }

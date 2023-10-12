@@ -1,5 +1,7 @@
 package local;
 
+import java.util.ArrayList;
+
 /**
  * Object for sharing state among listener, talker and main threads
  */
@@ -13,6 +15,7 @@ public class StateValue {
     // disregard it because we know we've finished that snapshot
     public int currentMarkerID = 0;
 
+    public ArrayList<String> recordedQueue = new ArrayList<String>();
 
     public StateValue(int s) {
         this.state = s;

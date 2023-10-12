@@ -14,9 +14,6 @@ import static java.lang.Thread.sleep;
 public class Main {
 
 
-
-
-
     /**
      * Invariant: always 5 peers
      *
@@ -86,51 +83,48 @@ public class Main {
             throw new RuntimeException(e);
         }
 
-        OpenTalker previousTalk = new OpenTalker(neighbors[1], talkPorts[1], hostname, state);
-        //OpenTalker previousTalk = new OpenTalker("localhost", talkPorts[1]); // hard code to localhost for rn
-        previousTalk.start();
-
-        OpenTalker nextTalk = new OpenTalker(neighbors[0], talkPorts[0], hostname, state);
-
-        //OpenTalker nextTalk = new OpenTalker("localhost", talkPorts[0]); // hard code to localhost for rn
-        nextTalk.start();
-
-
         float t = 1;
         float m = -1;
         float s = -1;
 
-
-        // Has this peer started its snapshot yet?
-        boolean startedSnap = false;
-
-        boolean receivedMarker = false;
-
-
-        printState(hostname, state.getState(), neighbors[1], neighbors[0]);
-
-
-        for(int i = 0; i < args.length; i++) {
+        for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             if (arg.equals("-x")) {
                 previousListen.hasToken = true;
                 state.hasToken = true;
 
-            } else if  (arg.equals("-t")) {
+            } else if (arg.equals("-t")) {
                 t = Float.parseFloat(args[i + 1]);
-            } else if  (arg.equals("-s")) {
+            } else if (arg.equals("-s")) {
                 s = Float.parseFloat(args[i + 1]);
-            } else if  (arg.equals("-m")) {
+            } else if (arg.equals("-m")) {
                 m = Float.parseFloat(args[i + 1]);
             }
         }
 
+        OpenTalker previousTalk = new OpenTalker(neighbors[1], talkPorts[1], hostname, state, t, m);
+        //OpenTalker previousTalk = new OpenTalker("localhost", talkPorts[1]); // hard code to localhost for rn
+        previousTalk.start();
+
+        OpenTalker nextTalk = new OpenTalker(neighbors[0], talkPorts[0], hostname, state, t, m);
+
+        //OpenTalker nextTalk = new OpenTalker("localhost", talkPorts[0]); // hard code to localhost for rn
+        nextTalk.start();
+
+
+        // Has this peer started its snapshot yet?
+        boolean startedSnap = false;
+
+        printState(hostname, state.getState(), neighbors[1], neighbors[0]);
+
+
+
         boolean first = true;
 
-        while(true) {
+        while (true) {
             if (previousListen.hasToken()) {
 
-                if(!first) {
+                if (!first) {
                     state.state++;
                 } else {
                     first = false;
@@ -140,42 +134,47 @@ public class Main {
 
                 nextTalk.hasToken = true;
                 previousListen.hasToken = false;
-                try {
-                    sleep((long)(t * 1000));
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
             }
 
             // If this peer should start a snapshot...
-            if(state.getState() == s && !startedSnap) {
+            if (state.getState() == s && !startedSnap) {
 
                 System.out.println("STARTING SNAP");
 
                 System.out.println("{id: " + hostname + ", snapshot:''started''}");
                 nextTalk.sendMarker = true;
                 previousTalk.sendMarker = true;
+
+                nextListen.isRecording = true;
+                previousListen.isRecording = true;
+
                 startedSnap = true;
             }
 
-            if(state.receivedMarker) {
-                // logic to determine what chanel to send marker on:
-
-                if(nextListen.sendToOther) {
-                    previousTalk.sendMarker = true;
-                }
-                if(previousListen.sendToOther) {
-                    nextTalk.sendMarker = true;
-                }
+            // Snapshot cases
+            if (nextListen.sendOnOther) {
+                previousTalk.sendMarker = true;
             }
+            if (previousListen.sendOnOther) {
+                nextTalk.sendMarker = true;
+            }
+            if (nextListen.recordOther) {
+                previousListen.isRecording = true;
+            }
+            if (previousListen.recordOther) {
+                nextListen.isRecording = true;
+            }
+
+            if(previousListen.isClosed && nextListen.isClosed) {
+                System.out.println("{id:" + hostname + ", snapshot:''complete''}");
+            }
+
         }
+
     }
 
     private static void startSnapshot(OpenTalker nextTalk, OpenTalker previousTalk, OpenListener nextListen,
                                       OpenListener previousListen) {
-
-
-
 
 
     }
