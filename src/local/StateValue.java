@@ -7,11 +7,17 @@ import java.util.ArrayList;
  */
 public class StateValue {
     public int state;
+
+    // If a token is received on this listener, then the process should send a marker to the opposite talker
+    // if prevListener receives a marker, then send msg on nextTalker
+
+    // tells main to tell other listeners when to record messages, if they are not closed
     public boolean receivedMarker = false;
 
     public boolean hasToken = false;
 
     public boolean sendOnOthers = false;
+
 
     public boolean incrementMarkerAfterSend = false;
 

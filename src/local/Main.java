@@ -98,20 +98,25 @@ public class Main {
          */
 
         // Make refrences for this peers neighbors, making token passing simplier
-        OpenListener previousListen = connections[3].listener;
-        OpenListener nextListen = connections[0].listener;
-        OpenTalker previousTalk = connections[3].talker;
-        OpenTalker nextTalk = connections[0].talker;
+//        OpenListener previousListen = connections[3].listener;
+//        OpenListener nextListen = connections[0].listener;
+//        OpenTalker previousTalk = connections[3].talker;
+//        OpenTalker nextTalk = connections[0].talker;
 
         for (TCPConnection c : connections)
             c.listener.start();
 
 
-        sleep(1000);
+        sleep(2000);
 
         // start talking channels after listeners are set up
         for (TCPConnection c : connections)
             c.talker.start();
+
+        sleep(2000);
+
+
+        // Letting program sleep to set up listeners
 
 
         for (int i = 0; i < args.length; i++) {
@@ -125,8 +130,14 @@ public class Main {
         printState(hostname, state.getState(), neighbors[1], neighbors[0]);
         boolean first = true;
 
-        System.out.println("Listening for token on port " + previousListen.port);
         while (true) {
+            // if this peer has received a marker and should record all channels not closed...
+            if(state.receivedMarker) {
+                for (TCPConnection c : connections) {
+                    c.listener.isRecording = true;
+                }
+            }
+
 
             // If this peer should start a snapshot...
             if (state.getState() == s && !startedSnap) {
@@ -135,8 +146,8 @@ public class Main {
                 System.out.println("{id: " + hostname + ", snapshot:''started''}");
 
                 for (TCPConnection c : connections) {
-                    System.out.println("Telling talk to send marker");
-                    System.out.println("is talker to " + c.talker.hostname + "alive?" +  c.talker.isAlive());
+                    //System.out.println("Telling talk to send marker");
+                    //System.out.println("is talker to " + c.talker.hostname + "alive?" +  c.talker.isAlive());
                     c.talker.sendMarker = true;
                     c.listener.isRecording = true;
                 }
@@ -155,14 +166,12 @@ public class Main {
                 state.sendOnOthers = false;
             }
 
-            // Snapshot cases
-
-
+            // Are all the channels closed?
             if (channelsAllClosed(connections) && state.receivedMarker) {
                 System.out.println("{id:" + hostname + ", snapshot:''complete''}");
-                previousListen.isClosed = nextListen.isClosed = false;
+                //previousListen.isClosed = nextListen.isClosed = false;
 
-                sleep(1000);
+                //sleep(1000);
                 // after finishing snap, only accept markers of a higher ID
                 for (TCPConnection c : connections) {
                     if (!c.listener.isClosed) {
@@ -173,21 +182,24 @@ public class Main {
                 //state.incrementMarkerAfterSend = true;
             }
 
-            sleep((long) (t * 1000));
 
+            //System.out.println("Does this peer have the token? " + state.hasToken);
             if (state.hasToken) {
-                nextTalk.sendToken = true;
-                state.hasToken = false;
+                connections[0].talker.sendToken = true;
+                sleep((long) (t * 1000));
+
             }
 
         }
 
     }
 
-    private static boolean channelsAllClosed(TCPConnection[] connections) {
+    private static boolean channelsAllClosed(TCPConnection[] connections) throws InterruptedException {
+        sleep(1000);
         for (TCPConnection c : connections) {
             if (!c.listener.isClosed) {
-                c.talker.sendMarker = false;
+                //c.talker.sendMarker = false;
+                return false;
             }
         }
         return true;

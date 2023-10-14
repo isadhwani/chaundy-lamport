@@ -22,13 +22,6 @@ public class OpenListener extends Thread {
 
     public String myHostname;
 
-    // If a token is received on this listener, then the process should send a marker to the opposite talker
-    // if prevListener receives a marker, then send msg on nextTalker
-
-    // tells other listener when to record messages
-    public boolean recordOther = false;
-
-    public boolean finishedSnap = false;
 
     public boolean isClosed = false;
     int port;
@@ -57,10 +50,10 @@ public class OpenListener extends Thread {
             //System.out.println("Server is listening on port " + port);
 
             while (true) {
-                System.out.println("starting listner...");
+                //System.out.println("starting listner...");
                 // Wait for a client to connect
                 Socket clientSocket = serverSocket.accept();
-               //System.out.println("Client connected: " + clientSocket.getLocalAddress());
+                //System.out.println("Client connected: " + clientSocket.getInetAddress().getHostName());
 
                 // Create a new thread to handle the client communication
                 handleClient(clientSocket);
@@ -78,9 +71,8 @@ public class OpenListener extends Thread {
 
             String receivedMessages;
             while ((receivedMessages = reader.readLine()) != null) {
-                System.out.println("Reading messages...");
                 //System.out.println("Received from " + clientSocket.getInetAddress().getHostName() + ": " + receivedMessages);
-                System.out.println("Received: " + receivedMessages);
+                //System.out.println("Received: " + receivedMessages);
 
                 String[] messages = receivedMessages.split("\\}\\{");
 
@@ -98,6 +90,13 @@ public class OpenListener extends Thread {
 
 
                     if (msg.equals("token")) {
+
+                        //System.out.println("RECEIVING TOKEN");
+
+                        System.out.println("{id: " + myHostname + ", state: " + state.state + "}");
+                        state.state = state.state + 1;
+
+                        //this.hasToken = true;
                         state.hasToken = true;
 
                         if (this.isRecording && !this.isClosed) {
@@ -110,11 +109,6 @@ public class OpenListener extends Thread {
                                 + ", receiver: " + decoded.get("receiver") + ", message: ''" + msg + "''}");
 
 
-                        state.state++;
-                        System.out.println("{id: " + myHostname + ", state: " + state.state + "}");
-                        state.hasToken = true;
-
-
                     } else if (msg.contains("marker")) {
                         int markerIndex = extractMarkerNumber(msg);
 
@@ -123,9 +117,9 @@ public class OpenListener extends Thread {
                             // If this listener has not yet received a marker (check ID later)
                             if (!this.state.receivedMarker) {
                                 System.out.println("Received first marker from " + decoded.get("sender") + ", current state: " + state.getState());
-                                this.state.sendOnOthers = true;
-                                this.recordOther = true;
-                                this.isRecording = false;
+                                state.sendOnOthers = true;
+
+                                //this.isRecording = false;
                                 this.state.receivedMarker = true;
                                 this.isClosed = true;
 
@@ -140,7 +134,7 @@ public class OpenListener extends Thread {
 
                                 this.isRecording = false;
                                 this.isClosed = true;
-                                this.state.sendOnOthers = true;
+                                state.sendOnOthers = true;
 
                                 //System.out.println("Message Queue with " + recordedQueue.size() + " messages: " + recordedQueue);
 
@@ -152,6 +146,8 @@ public class OpenListener extends Thread {
 
 
                                 this.recordedQueue = new ArrayList<String>();
+
+
                             }
                         }
                     }

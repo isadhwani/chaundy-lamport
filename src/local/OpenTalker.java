@@ -33,39 +33,26 @@ public class OpenTalker extends Thread {
 
     @Override
     public void run() {
-       System.out.println("Starting talker to " + hostname + " on port " + port);
-//
-//        boolean connEstablished = false;
-//
-//        while (!connEstablished) {
-//            try {
-//                if (establishConnection()) {
-//                    connEstablished = true;
-//                    continue;
-//                }
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//            try {
-//                sleep(1000);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//            System.out.println("Trying to establish tcp talker...");
-//        }
+       //System.out.println("Starting talker to " + hostname + " on port " + port);
+
         while (true) {
+
+            //System.out.println("Should this talker on port " + this.port + " send a token? " + this.sendToken);
 
             try {
                 //System.out.println("Send marker? : " + this.sendMarker);
-                sleep(1000);
                 Socket socket = new Socket(hostname, port);
 
                 OutputStream outputStream = socket.getOutputStream();
 
                 if (this.sendToken) {
-                    //sleep((long) (this.tokenDelay * 1000));
+                    state.hasToken = false;
+                    this.sendToken = false;
 
-                    System.out.println("Sending token to " + hostname + " on port " + port);
+
+
+
+                    //System.out.println("Sending token to " + hostname + " on port " + port);
                     String message = "{id: " + myHostname + ", sender: " + myHostname +
                     ", receiver: " + hostname + ", message:''token''}";
                     System.out.println(message);
@@ -73,17 +60,15 @@ public class OpenTalker extends Thread {
 
                     //String message = "token";
                     byte[] messageBytes = message.getBytes();
+
+                    //System.out.println("Sleeping for " + tokenDelay + " seconds");
                     outputStream.write(messageBytes);
+
                     outputStream.flush();
                     //System.out.println("Sent message to server: " + message);
-                    this.sendToken = false;
-                    state.hasToken = false;
-                }
-
-                if (this.sendMarker) {
+                } else if (this.sendMarker) {
                     System.out.println("Sending marker!!");
 
-                    sleep((long) (this.markerDelay * 1000));
                     String hasTokenYesNo = state.hasToken ? "YES" : "NO";
 
 
@@ -94,6 +79,8 @@ public class OpenTalker extends Thread {
 
 
                     byte[] messageBytes = message.getBytes();
+                    sleep((long) (this.markerDelay * 1000));
+
                     outputStream.write(messageBytes);
                     outputStream.flush();
                     this.sendMarker = false;
@@ -104,7 +91,7 @@ public class OpenTalker extends Thread {
                 }
 
                 // Close the socket
-                //socket.close();
+                socket.close();
             } catch (UnknownHostException e) {
                 throw new RuntimeException(e);
             } catch (IOException e) {
