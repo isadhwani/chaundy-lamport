@@ -67,7 +67,9 @@ public class OpenTalker extends Thread {
                     outputStream.flush();
                     //System.out.println("Sent message to server: " + message);
                 } else if (this.sendMarker) {
-                    System.out.println("Sending marker!!");
+                    //System.out.println("Sending marker!!");
+                    sleep((long)markerDelay * 1000);
+
 
                     String hasTokenYesNo = state.hasToken ? "YES" : "NO";
 
@@ -79,7 +81,7 @@ public class OpenTalker extends Thread {
 
 
                     byte[] messageBytes = message.getBytes();
-                    sleep((long) (this.markerDelay * 1000));
+                    //sleep((long) (this.markerDelay * 1000));
 
                     outputStream.write(messageBytes);
                     outputStream.flush();

@@ -2,7 +2,6 @@ package local;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -20,15 +19,11 @@ public class Main {
      * @param args
      */
     public static void main(String[] args) throws InterruptedException {
-        System.out.println("Command line arguments: " + Arrays.toString(args));
-
-
         String hostname;
 
         try {
             InetAddress localHost = InetAddress.getLocalHost();
             hostname = localHost.getHostName();
-            System.out.println("Host Name: " + hostname);
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
@@ -60,7 +55,6 @@ public class Main {
         TCPConnection[] connections = new TCPConnection[4];
 
 
-        Map<Integer, CommunicationChannels> outgoingPortTable = makePortTable(4950);
 
         int[][] outGoingPortTable = new int[5][5];
 
@@ -97,11 +91,6 @@ public class Main {
          * neighbors[1] --> previous
          */
 
-        // Make refrences for this peers neighbors, making token passing simplier
-//        OpenListener previousListen = connections[3].listener;
-//        OpenListener nextListen = connections[0].listener;
-//        OpenTalker previousTalk = connections[3].talker;
-//        OpenTalker nextTalk = connections[0].talker;
 
         for (TCPConnection c : connections)
             c.listener.start();
@@ -132,7 +121,7 @@ public class Main {
 
         while (true) {
             // if this peer has received a marker and should record all channels not closed...
-            if(state.receivedMarker) {
+            if(state.recordOnOthers) {
                 for (TCPConnection c : connections) {
                     c.listener.isRecording = true;
                 }
@@ -141,13 +130,11 @@ public class Main {
 
             // If this peer should start a snapshot...
             if (state.getState() == s && !startedSnap) {
-                System.out.println("STARTING SNAP");
+                //System.out.println("STARTING SNAP");
 
                 System.out.println("{id: " + hostname + ", snapshot:''started''}");
 
                 for (TCPConnection c : connections) {
-                    //System.out.println("Telling talk to send marker");
-                    //System.out.println("is talker to " + c.talker.hostname + "alive?" +  c.talker.isAlive());
                     c.talker.sendMarker = true;
                     c.listener.isRecording = true;
                 }
@@ -157,29 +144,22 @@ public class Main {
 
             // if any listener has received a marker, send on all channels that are not closed
             if (state.sendOnOthers) {
-                for (TCPConnection c : connections) {
-                    if (!c.listener.isClosed) {
-                        c.talker.sendMarker = true;
-                    }
-                }
-
-                state.sendOnOthers = false;
+                float finalM = m;
+                new Thread(() -> sendMarkers(connections, state, finalM)).start();
             }
 
             // Are all the channels closed?
             if (channelsAllClosed(connections) && state.receivedMarker) {
                 System.out.println("{id:" + hostname + ", snapshot:''complete''}");
-                //previousListen.isClosed = nextListen.isClosed = false;
 
-                //sleep(1000);
-                // after finishing snap, only accept markers of a higher ID
+
                 for (TCPConnection c : connections) {
                     if (!c.listener.isClosed) {
                         c.talker.sendMarker = false;
                     }
                 }
+                state.recordOnOthers = false;
                 state.receivedMarker = false;
-                //state.incrementMarkerAfterSend = true;
             }
 
 
@@ -187,7 +167,6 @@ public class Main {
             if (state.hasToken) {
                 connections[0].talker.sendToken = true;
                 sleep((long) (t * 1000));
-
             }
 
         }
@@ -198,15 +177,26 @@ public class Main {
         sleep(1000);
         for (TCPConnection c : connections) {
             if (!c.listener.isClosed) {
-                //c.talker.sendMarker = false;
                 return false;
             }
         }
         return true;
     }
 
-    private static void startSnapshot(OpenTalker nextTalk, OpenTalker previousTalk, OpenListener nextListen,
-                                      OpenListener previousListen) {
+    private static void sendMarkers (TCPConnection[] connections, StateValue state, float m)  {
+        for (TCPConnection c : connections) {
+            if (!c.listener.isClosed) {
+                try {
+                    sleep((long) (m * 1000));
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                c.talker.sendMarker = true;
+            }
+        }
+
+        state.sendOnOthers = false;
+
 
 
     }

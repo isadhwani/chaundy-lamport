@@ -110,45 +110,39 @@ public class OpenListener extends Thread {
 
 
                     } else if (msg.contains("marker")) {
-                        int markerIndex = extractMarkerNumber(msg);
+                        //int markerIndex = extractMarkerNumber(msg);
 
-                        if (markerIndex >= state.currentMarkerID && !this.isClosed) {
+                        if (!this.state.receivedMarker) {
+                            System.out.println("Received first marker from " + decoded.get("sender") + "printing current state: " + state.getState());
+                            state.sendOnOthers = true;
+                            state.recordOnOthers = true;
+                            this.isRecording = false;
+                            this.state.receivedMarker = true;
+                            this.isClosed = true;
 
-                            // If this listener has not yet received a marker (check ID later)
-                            if (!this.state.receivedMarker) {
-                                System.out.println("Received first marker from " + decoded.get("sender") + ", current state: " + state.getState());
-                                state.sendOnOthers = true;
+                            System.out.println("{id: " + this.myHostname +
+                                    ", snapshot:‘‘channel closed’’, channel: " + channelName +
+                                    ", queue:" + recordedQueue + "}");
 
-                                //this.isRecording = false;
-                                this.state.receivedMarker = true;
-                                this.isClosed = true;
+                        } else {
+                            // if this process has already received a marker AND this channel is open, we know this
+                            // is the only other channel a process can listen on and the snapshot must be over
+                            //this.isRecording = false;
 
-                                System.out.println("{id: " + this.myHostname +
-                                        ", snapshot:‘‘channel closed’’, channel: " + channelName +
-                                        ", queue:" + recordedQueue + "}");
-
-                            } else {
-                                // if this process has already received a marker AND this channel is open, we know this
-                                // is the only other channel a process can listen on and the snapshot must be over
-                                //this.isRecording = false;
-
-                                this.isRecording = false;
-                                this.isClosed = true;
-                                state.sendOnOthers = true;
-
-                                //System.out.println("Message Queue with " + recordedQueue.size() + " messages: " + recordedQueue);
+                            this.isRecording = false;
+                            this.isClosed = true;
+                            state.sendOnOthers = true;
 
 
-                                //System.out.println("SNAPSHOT COMPLETE");
-                                System.out.println("{id: " + this.myHostname +
-                                        ", snapshot:‘‘channel closed’’, channel: " + channelName +
-                                        ", queue:" + recordedQueue + "}");
+                            //System.out.println("SNAPSHOT COMPLETE");
+                            System.out.println("{id: " + this.myHostname +
+                                    ", snapshot:‘‘channel closed’’, channel: " + channelName +
+                                    ", queue:" + recordedQueue + "}");
 
 
-                                this.recordedQueue = new ArrayList<String>();
+                            this.recordedQueue = new ArrayList<String>();
 
 
-                            }
                         }
                     }
                 }

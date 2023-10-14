@@ -14,6 +14,8 @@ public class StateValue {
     // tells main to tell other listeners when to record messages, if they are not closed
     public boolean receivedMarker = false;
 
+    public boolean recordOnOthers = false;
+
     public boolean hasToken = false;
 
     public boolean sendOnOthers = false;
