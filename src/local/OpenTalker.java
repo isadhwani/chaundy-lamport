@@ -9,7 +9,7 @@ public class OpenTalker extends Thread {
     String hostname;
     int port;
 
-    boolean hasToken = false;
+    boolean sendToken = false;
     String myHostname;
 
     boolean sendMarker = false;
@@ -33,7 +33,7 @@ public class OpenTalker extends Thread {
 
     @Override
     public void run() {
-//        System.out.println("Sending a message to " + hostname + " on port " + port);
+       System.out.println("Starting talker to " + hostname + " on port " + port);
 //
 //        boolean connEstablished = false;
 //
@@ -56,13 +56,16 @@ public class OpenTalker extends Thread {
         while (true) {
 
             try {
+                //System.out.println("Send marker? : " + this.sendMarker);
+                sleep(1000);
                 Socket socket = new Socket(hostname, port);
 
                 OutputStream outputStream = socket.getOutputStream();
 
-                if (this.hasToken) {
-                    sleep((long) (this.tokenDelay * 1000));
+                if (this.sendToken) {
+                    //sleep((long) (this.tokenDelay * 1000));
 
+                    System.out.println("Sending token to " + hostname + " on port " + port);
                     String message = "{id: " + myHostname + ", sender: " + myHostname +
                     ", receiver: " + hostname + ", message:''token''}";
                     System.out.println(message);
@@ -73,11 +76,13 @@ public class OpenTalker extends Thread {
                     outputStream.write(messageBytes);
                     outputStream.flush();
                     //System.out.println("Sent message to server: " + message);
-                    this.hasToken = false;
+                    this.sendToken = false;
                     state.hasToken = false;
                 }
 
                 if (this.sendMarker) {
+                    System.out.println("Sending marker!!");
+
                     sleep((long) (this.markerDelay * 1000));
                     String hasTokenYesNo = state.hasToken ? "YES" : "NO";
 
@@ -99,7 +104,7 @@ public class OpenTalker extends Thread {
                 }
 
                 // Close the socket
-                socket.close();
+                //socket.close();
             } catch (UnknownHostException e) {
                 throw new RuntimeException(e);
             } catch (IOException e) {

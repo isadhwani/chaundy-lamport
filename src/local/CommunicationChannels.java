@@ -1,17 +1,13 @@
 package local;
 
 public class CommunicationChannels {
-    int previous;
-    int next;
+    int send;
+    int receive;
 
 
-    CommunicationChannels(int prev, int next) {
-        this.previous = prev;
-        this.next = next;
-    }
-    @Override
-    public String toString() {
-        return "Previous: " + this.previous + "\nNext: " + this.next;
+    CommunicationChannels(int send, int receive) {
+        this.send = send;
+        this.receive = receive;
     }
 
 }

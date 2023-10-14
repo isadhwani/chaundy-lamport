@@ -16,6 +16,8 @@ ADD src/local/CommunicationChannels.java /app/local/
 ADD src/local/OpenListener.java /app/local/
 ADD src/local/OpenTalker.java /app/local/
 ADD src/local/StateValue.java /app/local/
+ADD src/local/TCPConnection.java /app/local/
+
 
 
 ADD hostsfile.txt /app/
@@ -35,5 +37,7 @@ RUN javac /app/local/OpenTalker.java
 RUN javac /app/local/OpenListener.java
 RUN javac /app/local/CommunicationChannels.java
 RUN javac /app/local/Main.java
+RUN javac /app/local/TCPConnection.java
+
 
 ENTRYPOINT ["java", "local/Main"]

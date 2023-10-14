@@ -11,12 +11,15 @@ public class StateValue {
 
     public boolean hasToken = false;
 
+    public boolean sendOnOthers = false;
+
+    public boolean incrementMarkerAfterSend = false;
+
     // Represents the marker ID that this process has received up to. If a marker under this ID is received,
     // disregard it because we know we've finished that snapshot
     public int currentMarkerID = 0;
 
     public ArrayList<String> recordedQueue = new ArrayList<String>();
-    public boolean incrementMarkerAfterSend = false;
 
     public StateValue(int s) {
         this.state = s;
